@@ -26,7 +26,7 @@
     <string name="hint_apellido">Apellido</string>
     <string name="hint_email">Email</string>
     <string name="hint_github">GitHub URL</string>
-    <string name="hint_cursos">Cursos (IDs, separados por coma)</string>
+    <string name="hint_cursos"> Cursos (separados por coma)</string>
     <string name="hint_id">ID</string>
     <string name="btn_guardar">Guardar</string>
     <string name="msg_campos_obligatorios">Nombre, Apellido y Email son obligatorios</string>

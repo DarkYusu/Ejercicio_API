@@ -176,7 +176,7 @@ class EstudiantesListFragment : Fragment() {
         etCursos.setText(prefillCursos)
 
         AlertDialog.Builder(ctx)
-            .setTitle("Editar estudiante #${estudiante.id}")
+            .setTitle("Editar estudiante ID ${estudiante.id}")
             .setView(dialogView)
             .setPositiveButton(R.string.btn_guardar) { d, _ ->
                 d.dismiss()
