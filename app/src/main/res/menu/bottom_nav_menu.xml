@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/estudiantesListFragment"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="@string/nav_list_title" />
+    <item
+        android:id="@+id/estudianteAddFragment"
+        android:icon="@android:drawable/ic_input_add"
+        android:title="@string/nav_add_title" />
+</menu>
+

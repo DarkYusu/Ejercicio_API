@@ -1,0 +1,52 @@
+<resources>
+    <string name="app_name">Ejercicio API</string>
+
+    <!-- List item labels -->
+    <string name="label_id">ID: %1$d</string>
+    <string name="label_full_name">%1$s %2$s</string>
+    <string name="label_email">Email: %1$s</string>
+    <string name="label_github">GitHub: %1$s</string>
+    <string name="label_cursos">Cursos: %1$s</string>
+
+    <!-- Delete -->
+    <string name="cd_eliminar">Eliminar estudiante</string>
+    <string name="confirm_delete_title">Eliminar</string>
+    <string name="confirm_delete_message">¿Eliminar estudiante con ID %1$d?</string>
+    <string name="delete_ok">Eliminar</string>
+    <string name="delete_cancel">Cancelar</string>
+    <string name="delete_success">Estudiante eliminado</string>
+    <string name="delete_error">No se pudo eliminar</string>
+
+    <!-- Nav -->
+    <string name="nav_list_title">Lista</string>
+    <string name="nav_add_title">Agregar</string>
+
+    <!-- Add form -->
+    <string name="hint_nombre">Nombre</string>
+    <string name="hint_apellido">Apellido</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_github">GitHub URL</string>
+    <string name="hint_cursos">Cursos (IDs, separados por coma)</string>
+    <string name="hint_id">ID</string>
+    <string name="btn_guardar">Guardar</string>
+    <string name="msg_campos_obligatorios">Nombre, Apellido y Email son obligatorios</string>
+    <string name="msg_creado_ok">Estudiante creado</string>
+    <string name="msg_creado_fail">No se pudo crear</string>
+    <string name="msg_id_obligatorio">El ID es obligatorio</string>
+    <string name="msg_id_invalido">El ID debe ser un número mayor a 0</string>
+
+    <!-- Errores -->
+    <string name="title_error_crear">Error al crear</string>
+    <string name="msg_error_crear_detalle">HTTP %1$d
+%2$s</string>
+    <string name="btn_cerrar">Cerrar</string>
+
+    <!-- Edit -->
+    <string name="cd_editar">Editar estudiante</string>
+    <string name="update_success">Actualizado</string>
+    <string name="update_fail">No se pudo actualizar</string>
+    <string name="title_error_update">Error al actualizar</string>
+    <string name="msg_error_update_detalle">HTTP %1$d
+%2$s</string>
+    <string name="msg_cursos_no_reconocidos">Cursos no reconocidos: %1$s</string>
+</resources>

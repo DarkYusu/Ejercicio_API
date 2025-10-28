@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permitir tráfico cleartext solamente para el host del API -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">apiestudiantesandroid0043.duckdns.org</domain>
+    </domain-config>
+</network-security-config>
+
