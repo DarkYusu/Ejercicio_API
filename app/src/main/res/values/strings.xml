@@ -34,6 +34,12 @@
     <string name="msg_creado_fail">No se pudo crear</string>
     <string name="msg_id_obligatorio">El ID es obligatorio</string>
     <string name="msg_id_invalido">El ID debe ser un número mayor a 0</string>
+    <string name="cargando_cursos">Cargando cursos…</string>
+    <string name="intentando_cursos">Intentando cargar cursos (intento %1$d)…</string>
+    <string name="cursos_cargados_count">Cursos cargados: %1$d</string>
+    <string name="error_cargando_http">Error cargando cursos: HTTP %1$d</string>
+    <string name="error_cargando_msg">Error cargando cursos: %1$s</string>
+    <string name="fallo_cargar">Fallo al cargar cursos</string>
 
     <!-- Errores -->
     <string name="title_error_crear">Error al crear</string>

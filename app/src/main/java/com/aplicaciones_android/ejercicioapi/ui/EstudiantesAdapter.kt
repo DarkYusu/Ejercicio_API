@@ -31,6 +31,30 @@ class EstudiantesAdapter(
         notifyDataSetChanged()
     }
 
+    /**
+     * Actualiza (reemplaza) un estudiante existente por id en las listas internas.
+     * Si el estudiante está visible en la lista actual (`items`) notifica el cambio
+     * usando notifyItemChanged(pos) para una actualización eficiente.
+     */
+    fun updateItem(updated: Estudiante) {
+        // Actualizar allItems
+        val allIdx = allItems.indexOfFirst { it.id == updated.id }
+        if (allIdx >= 0) {
+            val tmpAll = allItems.toMutableList()
+            tmpAll[allIdx] = updated
+            allItems = tmpAll
+        }
+
+        // Actualizar items (lista mostrada) y notificar cambio si está visible
+        val idx = items.indexOfFirst { it.id == updated.id }
+        if (idx >= 0) {
+            val tmp = items.toMutableList()
+            tmp[idx] = updated
+            items = tmp
+            notifyItemChanged(idx)
+        }
+    }
+
     fun filter(query: String) {
         val q = query.trim().lowercase()
         if (q.isEmpty()) {
@@ -44,8 +68,8 @@ class EstudiantesAdapter(
                 val github = e.githubUrl?.lowercase() ?: ""
                 val cursosDetalle = when {
                     !e.cursos.isNullOrEmpty() -> e.cursos.joinToString(",") { it.nombre?.lowercase().orEmpty() }
-                    !e.cursosInscritosNombres.isNullOrEmpty() -> e.cursosInscritosNombres?.joinToString(",") { it.lowercase() } ?: ""
-                    !e.cursosInscritos.isNullOrEmpty() -> e.cursosInscritos?.joinToString(",") { id -> cursosMap?.get(id)?.lowercase() ?: id.toString() } ?: ""
+                    !e.cursosInscritosNombres.isNullOrEmpty() -> e.cursosInscritosNombres.joinToString(",") { it.lowercase() }
+                    !e.cursosInscritos.isNullOrEmpty() -> e.cursosInscritos.joinToString(",") { id -> cursosMap?.get(id)?.lowercase() ?: id.toString() }
                     else -> ""
                 }
                 idStr.contains(q) || nombre.contains(q) || apellido.contains(q) || email.contains(q) || github.contains(q) || cursosDetalle.contains(q)
@@ -81,12 +105,12 @@ class EstudiantesAdapter(
             // Si la API nos da detalles de cursos, usar nombre o id
             !e.cursos.isNullOrEmpty() -> e.cursos.joinToString(", ") { cr -> (cr.nombre?.takeIf { it.isNotBlank() } ?: cr.id.toString()).trim() }
             // Si la API nos da nombres directos en cursos_inscritos
-            !e.cursosInscritosNombres.isNullOrEmpty() -> e.cursosInscritosNombres?.joinToString(", ") { it.trim() } ?: ""
+            !e.cursosInscritosNombres.isNullOrEmpty() -> e.cursosInscritosNombres.joinToString(", ") { it.trim() }
             // Si solo tenemos ids, mapear a nombres cuando sea posible
             !e.cursosInscritos.isNullOrEmpty() -> {
                 val map = cursosMap
-                if (map.isNullOrEmpty()) e.cursosInscritos?.joinToString(", ") { it.toString() } ?: ""
-                else e.cursosInscritos?.joinToString(", ") { id -> (map[id] ?: id.toString()).trim() } ?: ""
+                if (map.isNullOrEmpty()) e.cursosInscritos.joinToString(", ") { it.toString() }
+                else e.cursosInscritos.joinToString(", ") { id -> (map[id] ?: id.toString()).trim() }
             }
             else -> ""
         }
@@ -96,6 +120,8 @@ class EstudiantesAdapter(
 
         holder.btnDelete.setOnClickListener { onDeleteClick?.invoke(e) }
         holder.btnEdit.setOnClickListener { onEditClick?.invoke(e) }
+        // Permitir editar haciendo click en todo el item
+        holder.itemView.setOnClickListener { onEditClick?.invoke(e) }
     }
 
     override fun getItemCount(): Int = items.size

@@ -1,7 +1,6 @@
 package com.aplicaciones_android.ejercicioapi.ui
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,7 +16,6 @@ import com.aplicaciones_android.ejercicioapi.model.Estudiante
 import com.aplicaciones_android.ejercicioapi.model.EstudianteUpdateRequest
 import com.aplicaciones_android.ejercicioapi.network.RetrofitClient
 import kotlinx.coroutines.launch
-import org.json.JSONArray
 import org.json.JSONObject
 
 class EstudiantesListFragment : Fragment() {
@@ -45,8 +43,8 @@ class EstudiantesListFragment : Fragment() {
         }, cursosMap)
         recycler.adapter = adapter
 
-        // Cargar cursos y luego estudiantes
-        loadCursosThenEstudiantes(progress)
+        // Cargar estudiantes (no consultamos la API de cursos)
+        loadEstudiantes(progress)
 
         search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
@@ -65,25 +63,6 @@ class EstudiantesListFragment : Fragment() {
                 return true
             }
         })
-    }
-
-    private fun loadCursosThenEstudiantes(progress: View) {
-        progress.visibility = View.VISIBLE
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val cursosResp = RetrofitClient.api.getCursos()
-                if (cursosResp.isSuccessful) {
-                    val cursos = cursosResp.body() ?: emptyList()
-                    cursosMap = cursos.associate { it.id to (it.nombre ?: "Curso ${it.id}") }
-                    adapter.setCursosMap(cursosMap)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                // Tras intentar cargar cursos, cargar estudiantes
-                loadEstudiantes(progress)
-            }
-        }
     }
 
     private fun confirmAndDelete(id: Int, progress: View) {
@@ -190,11 +169,11 @@ class EstudiantesListFragment : Fragment() {
         val map = cursosMap.orEmpty()
         val prefillCursos = when {
             !estudiante.cursos.isNullOrEmpty() -> estudiante.cursos.joinToString(", ") { it.nombre?.takeIf { n -> n.isNotBlank() } ?: it.id.toString() }
-            !estudiante.cursosInscritosNombres.isNullOrEmpty() -> estudiante.cursosInscritosNombres?.joinToString(", ") { it.trim() }
-            !estudiante.cursosInscritos.isNullOrEmpty() -> estudiante.cursosInscritos?.joinToString(", ") { id -> map[id] ?: id.toString() }
+            !estudiante.cursosInscritosNombres.isNullOrEmpty() -> estudiante.cursosInscritosNombres.joinToString(", ") { it.trim() }
+            !estudiante.cursosInscritos.isNullOrEmpty() -> estudiante.cursosInscritos.joinToString(", ") { id -> map[id] ?: id.toString() }
             else -> ""
         }
-        etCursos.setText(prefillCursos ?: "")
+        etCursos.setText(prefillCursos)
 
         AlertDialog.Builder(ctx)
             .setTitle("Editar estudiante #${estudiante.id}")
@@ -206,39 +185,40 @@ class EstudiantesListFragment : Fragment() {
                 val emailIn = etEmail.text.toString().trim().ifEmpty { null }
                 val githubIn = etGithub.text.toString().trim().ifEmpty { null }
 
-                // Parsear cursos a nombres
+                // Parsear cursos: aceptar siempre texto libre. Si existe `map` y encontramos
+                // un nombre oficial para un id, lo usamos; en caso contrario enviamos el token tal cual.
                 val cursosStr = etCursos.text.toString().trim()
                 val tokens = cursosStr.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-                val byName = map.mapKeys { it.value.lowercase() } // nombre->id invertido por nombre en minúsculas
-                val byId = map // id->nombre
                 val resolvedNames = mutableListOf<String>()
-                val unknown = mutableListOf<String>()
-                for (tk in tokens) {
-                    val asId = tk.toIntOrNull()
-                    if (asId != null) {
-                        val name = byId[asId]
-                        if (name != null) resolvedNames.add(name) else unknown.add(tk)
+                if (tokens.isNotEmpty()) {
+                    // Si no tenemos mapeo, aceptamos tokens tal cual
+                    if (map.isEmpty()) {
+                        resolvedNames.addAll(tokens)
                     } else {
-                        val name = tk
-                        if (byName.containsKey(name.lowercase())) resolvedNames.add(name) else unknown.add(tk)
+                        // map: id -> nombre
+                        for (tk in tokens) {
+                            val asId = tk.toIntOrNull()
+                            if (asId != null) {
+                                val name = map[asId]
+                                if (!name.isNullOrEmpty()) resolvedNames.add(name) else resolvedNames.add(tk)
+                            } else {
+                                val match = map.values.firstOrNull { it.equals(tk, ignoreCase = true) }
+                                if (match != null) resolvedNames.add(match) else resolvedNames.add(tk)
+                            }
+                        }
                     }
-                }
-
-                if (tokens.isNotEmpty() && resolvedNames.isEmpty()) {
-                    Toast.makeText(requireContext(), "Cursos no reconocidos: " + unknown.joinToString(", "), Toast.LENGTH_LONG).show()
-                    return@setPositiveButton
                 }
 
                 val nombre = nombreIn ?: estudiante.nombre ?: ""
                 val apellido = apellidoIn ?: estudiante.apellido ?: ""
                 val email = emailIn ?: estudiante.email ?: ""
                 val github = githubIn ?: estudiante.githubUrl ?: ""
-                val cursosNames = if (tokens.isEmpty()) {
-                    // Si no se editaron cursos, mantener los existentes como nombres cuando sea posible
+
+                val cursosNames: List<String> = if (tokens.isEmpty()) {
                     when {
                         !estudiante.cursosInscritosNombres.isNullOrEmpty() -> estudiante.cursosInscritosNombres
-                        !estudiante.cursos.isNullOrEmpty() -> estudiante.cursos?.map { it.nombre ?: it.id.toString() }
-                        !estudiante.cursosInscritos.isNullOrEmpty() -> estudiante.cursosInscritos?.map { id -> map[id] ?: id.toString() }
+                        !estudiante.cursos.isNullOrEmpty() -> estudiante.cursos.map { it.nombre ?: it.id.toString() }
+                        !estudiante.cursosInscritos.isNullOrEmpty() -> estudiante.cursosInscritos.map { id -> map[id] ?: id.toString() }
                         else -> emptyList()
                     }
                 } else resolvedNames
@@ -263,21 +243,11 @@ class EstudiantesListFragment : Fragment() {
             try {
                 val resp = RetrofitClient.api.updateEstudiante(id, body)
                 if (resp.isSuccessful) {
-                    val listResp = RetrofitClient.api.getEstudiantes()
-                    if (listResp.isSuccessful) {
-                        adapter.update(listResp.body() ?: emptyList())
-                    }
-                    Toast.makeText(requireContext(), getString(R.string.update_success), Toast.LENGTH_SHORT).show()
+                    // Recargar la lista para reflejar cambios en la UI
+                    loadEstudiantes(progress)
+                    Toast.makeText(requireContext(), "Estudiante actualizado", Toast.LENGTH_SHORT).show()
                 } else {
-                    val code = resp.code()
-                    val raw = resp.errorBody()?.string()
-                    Log.e("PUT_UPDATE", "HTTP $code error body: $raw")
-                    val detail = parseUpdateError(raw)
-                    AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.title_error_update)
-                        .setMessage(getString(R.string.msg_error_update_detalle, code, detail))
-                        .setPositiveButton(R.string.btn_cerrar, null)
-                        .show()
+                    handleError(resp.errorBody()?.string())
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -286,19 +256,5 @@ class EstudiantesListFragment : Fragment() {
                 progress.visibility = View.GONE
             }
         }
-    }
-
-    private fun parseUpdateError(raw: String?): String {
-        if (raw.isNullOrEmpty()) return getString(R.string.update_fail)
-        try {
-            val jo = JSONObject(raw)
-            if (jo.has("detail")) return jo.optString("detail")
-            val arr = JSONArray(raw)
-            if (arr.length() > 0) {
-                val msgs = (0 until arr.length()).mapNotNull { i -> arr.optJSONObject(i)?.optString("msg") }
-                if (msgs.isNotEmpty()) return msgs.joinToString("\n")
-            }
-        } catch (_: Exception) {}
-        return raw.take(500)
     }
 }

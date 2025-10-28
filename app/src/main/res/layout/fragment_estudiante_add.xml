@@ -20,7 +20,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etId"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="35dp"
                 android:hint="@string/hint_id"
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
@@ -37,7 +37,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etNombre"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:hint="@string/hint_nombre" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -53,7 +53,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etApellido"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="40dp"
                 android:hint="@string/hint_apellido" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -69,7 +69,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etEmail"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="38dp"
                 android:hint="@string/hint_email"
                 android:inputType="textEmailAddress" />
         </com.google.android.material.textfield.TextInputLayout>
@@ -86,7 +86,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etGithub"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="47dp"
                 android:hint="@string/hint_github"
                 android:inputType="textUri" />
         </com.google.android.material.textfield.TextInputLayout>
@@ -100,13 +100,16 @@
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginTop="12dp">
 
-            <com.google.android.material.textfield.TextInputEditText
+            <MultiAutoCompleteTextView
                 android:id="@+id/etCursos"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="47dp"
+                android:completionThreshold="1"
                 android:hint="@string/hint_cursos"
                 android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Estado de carga del catálogo de cursos -->
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGuardar"

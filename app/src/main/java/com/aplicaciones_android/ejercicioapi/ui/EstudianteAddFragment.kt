@@ -5,6 +5,9 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.MultiAutoCompleteTextView
+import android.widget.MultiAutoCompleteTextView.CommaTokenizer
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -19,6 +22,7 @@ import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.Normalizer
 
 class EstudianteAddFragment : Fragment() {
 
@@ -39,71 +43,67 @@ class EstudianteAddFragment : Fragment() {
         val etApellido = view.findViewById<TextInputEditText>(R.id.etApellido)
         val etEmail = view.findViewById<TextInputEditText>(R.id.etEmail)
         val etGithub = view.findViewById<TextInputEditText>(R.id.etGithub)
-        val etCursos = view.findViewById<TextInputEditText>(R.id.etCursos)
+        val etCursos = view.findViewById<MultiAutoCompleteTextView>(R.id.etCursos)
         val btnGuardar = view.findViewById<MaterialButton>(R.id.btnGuardar)
         val progress = view.findViewById<ProgressBar>(R.id.progress)
 
-        // Cargar el catálogo de cursos para admitir nombres
-        loadCursosCatalog()
+        // Preparar adapter para auto-complete (opcional; vacío porque no consultamos la API)
+        val cursosAdapter = ArrayAdapter<String>(requireContext(), android.R.layout.simple_dropdown_item_1line, mutableListOf())
+        etCursos.setAdapter(cursosAdapter)
+        etCursos.setTokenizer(CommaTokenizer())
 
-        btnGuardar.setOnClickListener {
-            val idText = etId.text?.toString()?.trim().orEmpty()
-            val idValue = idText.toIntOrNull()
-            if (idText.isEmpty()) {
-                tilId.error = getString(R.string.msg_id_obligatorio)
-                return@setOnClickListener
-            }
-            if (idValue == null || idValue <= 0) {
-                tilId.error = getString(R.string.msg_id_invalido)
-                return@setOnClickListener
-            } else {
-                tilId.error = null
-            }
+        // No consultamos la API de cursos: permitimos texto libre o códigos.
+        // Habilitar el botón inmediatamente.
+        btnGuardar.isEnabled = true
 
-            val nombre = etNombre.text?.toString()?.trim().orEmpty()
-            val apellido = etApellido.text?.toString()?.trim().orEmpty()
-            val email = etEmail.text?.toString()?.trim().orEmpty()
-            val github = etGithub.text?.toString()?.trim()?.ifEmpty { null }
-
-            // Cursos: aceptar IDs o nombres separados por coma
-            val cursosInput = etCursos.text?.toString()?.trim().orEmpty()
-            val tokens = cursosInput.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        // Función local que procesa una lista de tokens (nombres o IDs) y realiza el envío
+        // Construye una lista de nombres (List<String>) para enviar en `cursos_inscritos`.
+        fun processAndSend(
+            idValueParam: Int,
+            nombreParam: String,
+            apellidoParam: String,
+            emailParam: String,
+            githubParam: String?,
+            tokensList: List<String>
+        ) {
+            // resolvedNames serán los nombres de cursos que se enviarán al servidor
             val resolvedNames = mutableListOf<String>()
-            val unknownTokens = mutableListOf<String>()
-            for (tk in tokens) {
+            for (tk in tokensList) {
                 val asId = tk.toIntOrNull()
                 if (asId != null) {
+                    // Si conocemos el nombre por ID, lo usamos; si no, enviamos el token como string
                     val name = cursosById[asId]
-                    if (name != null) resolvedNames.add(name) else unknownTokens.add(tk)
+                    if (name != null) resolvedNames.add(name) else resolvedNames.add(tk)
                 } else {
-                    val name = tk
-                    val id = cursosByName[name.lowercase()]
-                    if (id != null) resolvedNames.add(name) else unknownTokens.add(tk)
+                    // Es un nombre: si tenemos catálogo y hay una forma canónica, podemos usarla
+                    val norm = normalize(tk)
+                    val idFromName = cursosByName[norm]
+                    if (idFromName != null) {
+                        // usar el nombre oficial del catálogo cuando esté disponible
+                        val official = cursosById[idFromName]
+                        if (!official.isNullOrEmpty()) resolvedNames.add(official) else resolvedNames.add(tk)
+                    } else {
+                        // No conocemos dicho curso en el catálogo (o no está cargado): enviarlo tal cual
+                        resolvedNames.add(tk)
+                    }
                 }
             }
 
-            if (nombre.isEmpty() || apellido.isEmpty() || email.isEmpty()) {
+            if (nombreParam.isEmpty() || apellidoParam.isEmpty() || emailParam.isEmpty()) {
                 Toast.makeText(requireContext(), getString(R.string.msg_campos_obligatorios), Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
-
-            // Si el usuario escribió algo en cursos pero no se resolvió nada, avisar y no continuar
-            if (tokens.isNotEmpty() && resolvedNames.isEmpty()) {
-                val msg = "Cursos no reconocidos: " + unknownTokens.joinToString(", ")
-                Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
-                return@setOnClickListener
+                return
             }
 
             val body = EstudianteCreateRequest(
-                id = idValue,
-                nombre = nombre,
-                apellido = apellido,
-                email = email,
-                githubUrl = github,
+                id = idValueParam,
+                nombre = nombreParam,
+                apellido = apellidoParam,
+                email = emailParam,
+                githubUrl = githubParam,
                 cursosInscritos = resolvedNames
             )
 
-            Log.d("ADD_ESTUDIANTE", "tokens=$tokens resolvedNames=$resolvedNames unknown=$unknownTokens")
+            Log.d("ADD_ESTUDIANTE", "tokens=$tokensList resolvedNames=$resolvedNames")
 
             progress.visibility = View.VISIBLE
             viewLifecycleOwner.lifecycleScope.launch {
@@ -118,7 +118,6 @@ class EstudianteAddFragment : Fragment() {
                         etGithub.setText("")
                         etCursos.setText("")
                     } else {
-                        // Mostrar detalle del error
                         val code = resp.code()
                         val raw = resp.errorBody()?.string()
                         val detail = parseErrorDetail(raw)
@@ -136,28 +135,44 @@ class EstudianteAddFragment : Fragment() {
                 }
             }
         }
+
+        btnGuardar.setOnClickListener {
+            val idText = etId.text?.toString()?.trim().orEmpty()
+            val idValue = idText.toIntOrNull()
+            if (idText.isEmpty()) {
+                tilId.error = getString(R.string.msg_id_obligatorio)
+                return@setOnClickListener
+            }
+            if (idValue == null || idValue <= 0) {
+                tilId.error = getString(R.string.msg_id_invalido)
+                return@setOnClickListener
+            } else {
+                tilId.error = null
+            }
+            // idValue ahora es seguro (no null y > 0) — usarlo directamente
+            val idValueNonNull = idValue
+
+            val nombre = etNombre.text?.toString()?.trim().orEmpty()
+            val apellido = etApellido.text?.toString()?.trim().orEmpty()
+            val email = etEmail.text?.toString()?.trim().orEmpty()
+            val github = etGithub.text?.toString()?.trim()?.ifEmpty { null }
+
+            // Cursos: aceptar IDs o nombres o texto libre separados por coma
+            val cursosInput = etCursos.text?.toString()?.trim().orEmpty()
+            val tokens = cursosInput.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+
+            // Procesar normalmente con todos los tokens (se enviarán como strings)
+            processAndSend(idValueNonNull, nombre, apellido, email, github, tokens)
+        }
     }
 
-    private fun loadCursosCatalog() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val resp = RetrofitClient.api.getCursos()
-                if (resp.isSuccessful) {
-                    val cursos = resp.body().orEmpty()
-                    cursosByName = cursos.mapNotNull { c ->
-                        val name = c.nombre?.trim()
-                        val id = c.id
-                        if (!name.isNullOrEmpty()) name.lowercase() to id else null
-                    }.toMap()
-                    cursosById = cursos.mapNotNull { c ->
-                        val name = c.nombre?.trim()
-                        if (!name.isNullOrEmpty()) c.id to name else null
-                    }.toMap()
-                }
-            } catch (_: Exception) {
-                // Silencioso
-            }
-        }
+    // Normaliza una cadena: trim, lowercase y remover diacríticos (acentos)
+    private fun normalize(input: String?): String {
+        if (input == null) return ""
+        val trimmed = input.trim().lowercase()
+        val normalized = Normalizer.normalize(trimmed, Normalizer.Form.NFD)
+        // Eliminar marcas de combinación (diacríticos)
+        return normalized.replace("\\p{M}+".toRegex(), "")
     }
 
     private fun parseErrorDetail(raw: String?): String {

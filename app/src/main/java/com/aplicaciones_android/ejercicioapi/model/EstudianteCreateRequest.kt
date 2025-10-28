@@ -11,5 +11,6 @@ data class EstudianteCreateRequest(
     @SerializedName("apellido") val apellido: String,
     @SerializedName("email") val email: String,
     @SerializedName("github_url") val githubUrl: String?,
+    // La API recibe cursos como strings (p. ej. nombres); la DB espera un arreglo, así que enviamos lista de strings
     @SerializedName("cursos_inscritos") val cursosInscritos: List<String> = emptyList()
 )

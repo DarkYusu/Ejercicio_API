@@ -12,5 +12,6 @@ data class EstudianteUpdateRequest(
     @SerializedName("apellido") val apellido: String?,
     @SerializedName("email") val email: String?,
     @SerializedName("github_url") val githubUrl: String?,
-    @SerializedName("cursos_inscritos") val cursosInscritos: List<String>?
+    @SerializedName("cursos_inscritos") val cursosInscritos: List<String> = emptyList()
+
 )
